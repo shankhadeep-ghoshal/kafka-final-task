@@ -4,8 +4,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 
 @SpringBootApplication
-class KotlinfinaltaskApplication
+class KotlinFinalTaskApplication
 
 fun main(args: Array<String>) {
-    runApplication<KotlinfinaltaskApplication>(*args)
+	runApplication<KotlinFinalTaskApplication>(*args)
 }
