@@ -20,6 +20,8 @@ repositories {
 val mockkVersion = "1.13.2"
 val springMockk = "3.1.1"
 val r2dbcDriver = "0.8.2.RELEASE"
+val kotlinLogging = "3.0.4"
+val logback = "1.4.5"
 
 dependencies {
     // Spring stuff
@@ -34,6 +36,10 @@ dependencies {
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
+    // Logging
+    implementation("io.github.microutils:kotlin-logging-jvm:${kotlinLogging}")
+//    implementation("ch.qos.logback:logback-classic:${logback}")
+
     // Persistence
     implementation("io.r2dbc:r2dbc-spi")
     runtimeOnly("mysql:mysql-connector-java")
@@ -43,6 +49,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test") {
         exclude(module = "mockito-core")
     }
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test")
     testImplementation("io.projectreactor:reactor-test")
     testImplementation("com.ninja-squad:springmockk:${springMockk}")
     testImplementation("io.mockk:mockk:${mockkVersion}")
