@@ -7,11 +7,6 @@ import org.springframework.data.repository.kotlin.CoroutineCrudRepository
 import org.springframework.r2dbc.core.*
 import org.springframework.stereotype.Repository
 
-val IMAGE_URL_BY_BREED_MAIN_NAME: (String) -> String =
-    { breedName -> "https://dog.ceo/api/breed/${breedName}/images" }
-
-const val GET_ALL_DOG_BREED_URL = "https://dog.ceo/api/breeds/list/all"
-
 const val SELECT_URLS_GIVEN_BREED_MAIN_NAME =
     """
         SELECT urls.* 

@@ -9,22 +9,22 @@ import com.shankhadeepghoshal.kotlinfinaltask.repository.DogRepository
 import com.shankhadeepghoshal.kotlinfinaltask.repository.UrlRepository
 import io.mockk.coEvery
 import io.mockk.every
-import io.mockk.impl.annotations.InjectMockKs
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.last
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 
 @ExtendWith(MockKExtension::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class DogsApiServiceUnitTest {
-    private val URL = "http://www.foo.com/labrador"
+    private val url = "http://www.foo.com/labrador"
 
     @MockK
     lateinit var dogRepo: DogRepository
@@ -35,18 +35,20 @@ internal class DogsApiServiceUnitTest {
     @MockK
     lateinit var restService: RestService
 
-    @MockK
-    lateinit var objectMapper: ObjectMapper
+    lateinit var dogsService: DogsApiService
 
-    @InjectMockKs
-    lateinit var apiService: DogsApiServiceImpl
+    @BeforeEach
+    fun setUp() {
+        val objectMapper = ObjectMapper()
+        dogsService = DogsApiService(dogRepo, urlRepository, restService, objectMapper)
+    }
 
     @Test
     fun `test find all dogs`() = runTest {
         val dogOfInterest = Dog(1, "Labrador")
 
         every { dogRepo.findAll() } returns flowOf(dogOfInterest)
-        val dogReturned = apiService.findAllDogs().last()
+        val dogReturned = dogsService.findAllDogs().last()
 
         Assertions.assertEquals(dogOfInterest, dogReturned)
     }
@@ -60,10 +62,8 @@ internal class DogsApiServiceUnitTest {
         coEvery { restService.getUrlsDogName(nonExistentDogName) } returns
                 DogApiResponseGetImages(emptyList())
 
-        Assertions.assertThrows(DogNotFoundException::class.java) {
-            runBlocking {
-                apiService.findDogsUrl(nonExistentDogName)
-            }
+        assertThrows<DogNotFoundException> {
+            dogsService.findDogsUrl(nonExistentDogName)
         }
     }
 
@@ -73,23 +73,21 @@ internal class DogsApiServiceUnitTest {
 
         coEvery { urlRepository.findUrlsGivenDogName(dogExists) } returns emptyList()
         coEvery { dogRepo.findIdsGivenBreedMainName(dogExists) } returns 0
-        coEvery { urlRepository.insertUrlForDogId(0, URL) } returns Unit
+        coEvery { urlRepository.insertUrlForDogId(0, url) } returns Unit
         coEvery { urlRepository.findUrlsGivenDogName(dogExists) } returns listOf(
             Url(
-                url = URL,
+                url = url,
                 dogId = 1
             )
         )
         coEvery { restService.getUrlsDogName(dogExists) } returns
-                DogApiResponseGetImages(listOf(URL))
+                DogApiResponseGetImages(listOf(url))
 
-        val urlsObtained = runBlocking {
-            apiService.findDogsUrl(dogExists)
-        }
+        val urlsObtained = dogsService.findDogsUrl(dogExists)
 
         Assertions.assertNotNull(urlsObtained)
         if (urlsObtained != null) {
-            Assertions.assertEquals(URL, urlsObtained.toTypedArray()[0].url)
+            Assertions.assertEquals(url, urlsObtained.toTypedArray()[0].url)
         }
     }
 }

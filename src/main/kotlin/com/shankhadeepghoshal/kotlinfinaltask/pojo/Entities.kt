@@ -19,4 +19,7 @@ data class Url(
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
+data class DogsFetchApiResponse(val message: Map<String, List<String>>)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class DogApiResponseGetImages(val message: List<String>?)

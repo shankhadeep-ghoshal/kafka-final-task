@@ -4,11 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.shankhadeepghoshal.kotlinfinaltask.exception.DogNotFoundException
 import com.shankhadeepghoshal.kotlinfinaltask.pojo.Dog
 import com.shankhadeepghoshal.kotlinfinaltask.pojo.DogApiResponseGetImages
+import com.shankhadeepghoshal.kotlinfinaltask.pojo.DogsFetchApiResponse
 import com.shankhadeepghoshal.kotlinfinaltask.pojo.Url
-import com.shankhadeepghoshal.kotlinfinaltask.repository.DogRepository
-import com.shankhadeepghoshal.kotlinfinaltask.repository.GET_ALL_DOG_BREED_URL
-import com.shankhadeepghoshal.kotlinfinaltask.repository.IMAGE_URL_BY_BREED_MAIN_NAME
-import com.shankhadeepghoshal.kotlinfinaltask.repository.UrlRepository
+import com.shankhadeepghoshal.kotlinfinaltask.repository.*
 import kotlinx.coroutines.flow.*
 import mu.KotlinLogging
 import org.springframework.http.MediaType
@@ -18,25 +16,20 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.awaitBody
 
-interface DogsApiService {
-    fun findAllDogs(): Flow<Dog>
-    suspend fun findDogsUrl(dogName: String): List<Url>?
-    suspend fun findAllDogsAndPersist()
-}
 
 @Service
-class DogsApiServiceImpl(
+class DogsApiService(
     private val dogRepo: DogRepository,
     private val urlRepository: UrlRepository,
     private val restService: RestService,
     private val objectMapper: ObjectMapper
-) : DogsApiService {
+) {
     private val log = KotlinLogging.logger {}
-    override fun findAllDogs() = dogRepo.findAll()
+    fun findAllDogs() = dogRepo.findAll()
 
     @Throws(DogNotFoundException::class)
     @Transactional
-    override suspend fun findDogsUrl(dogName: String): List<Url>? {
+    suspend fun findDogsUrl(dogName: String): List<Url>? {
         var urlsByDogNameFromDb = urlRepository.findUrlsGivenDogName(dogName)
 
         if (urlsByDogNameFromDb.isNullOrEmpty()) {
@@ -56,21 +49,25 @@ class DogsApiServiceImpl(
     }
 
     @Transactional
-    override suspend fun findAllDogsAndPersist() {
-        if (dogRepo.findById(1) == null) {
-            objectMapper.readTree(restService.getAllDogs())
-                .get("message")
-                .fields()
-                .asSequence()
-                .map { entry ->
-                    Dog(name = entry.key)
-                }.forEach { dogRepo.save(it) }
+    suspend fun findAllDogsAndPersist() {
+        if (!dogRepo.existsById(1)) {
+            restService.getAllDogs()
+                .message
+                .map { entry ->  Dog(name = entry.key)}
+                .forEach { dogRepo.save(it) }
         }
     }
 }
 
 @Service
 class RestService {
+    companion object {
+        private val IMAGE_URL_BY_BREED_MAIN_NAME: (String) -> String =
+            { breedName -> "https://dog.ceo/api/breed/${breedName}/images" }
+
+        private const val GET_ALL_DOG_BREED_URL = "https://dog.ceo/api/breeds/list/all"
+    }
+
     suspend fun getUrlsDogName(@PathVariable("breedName") breedName: String) =
         WebClient.create()
             .get()
@@ -79,14 +76,11 @@ class RestService {
             .retrieve()
             .awaitBody<DogApiResponseGetImages>()
 
-    suspend fun getAllDogs(): String {
-        val retrieve = WebClient.create()
+    suspend fun getAllDogs() =
+        WebClient.create()
             .get()
             .uri(GET_ALL_DOG_BREED_URL)
             .accept(MediaType.APPLICATION_JSON)
             .retrieve()
-        val body = retrieve.awaitBody<String>()
-
-        return body
-    }
+            .awaitBody<DogsFetchApiResponse>()
 }
